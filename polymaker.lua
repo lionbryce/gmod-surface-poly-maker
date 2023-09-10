@@ -7,9 +7,16 @@ frame:MakePopup()
 local canvas = vgui.Create("DPanel",frame)
 canvas:Dock(FILL)
 
+local color_black = Color(0,0,0) -- just in case this doesn't turn out to be in _G
 local active_point_table = 1 -- a "pointer" to the current point table we're working with, it's just the index.
 
-local point_tables = {{}} -- a table to hold our arrays of points
+local function newPointTable()
+	return {
+		color = color_black
+	}
+end
+
+local point_tables = {newPointTable()} -- a table to hold our arrays/tables of points
 
 local function addPoint(x,y) -- add a point to the current table
 	local points = point_tables[active_point_table]
@@ -22,10 +29,10 @@ local function removePoint() -- removes the last point from the current table
 end
 
 local function switchPointTable(index) -- switches to a new point table based on the index supplied, creates the table as necessary
-	if index < 1 then return end -- as much as I'd like to let you go below 1, we'd have to use pairs at that point which doesn't maintain order and SortedPairs is odd
+	if index < 1 then return end -- as much as I'd like to let you go below 1, we'd have to use pairs at that point which won't work unless we restructure the data
 
 	active_point_table = index
-	point_tables[active_point_table] = point_tables[active_point_table] or {} -- create the table if it doesn't exist
+	point_tables[active_point_table] = point_tables[active_point_table] or newPointTable() -- create the table if it doesn't exist
 
 	print("switched to point table",active_point_table) -- nice to know which one you're working with
 end
@@ -51,25 +58,51 @@ function canvas:Paint(w,h)
 	surface.SetDrawColor(255,255,255) -- paper background
 	surface.DrawRect(0,0,w,h)
 
-	surface.SetDrawColor(0,0,0) -- "pencil" foreground
-	draw.NoTexture()
+	draw.NoTexture() -- reset the material
 
 	for k,points in ipairs(point_tables) do -- draw all the point tables
 		if k == active_point_table then -- if it's the active one, draw it with red and make sure to add where the cursor is as the next point temporarily for drawing
 			local x,y = self:CursorPos()
 			addPoint(x,y)
-			drawPointsTable(points, Color(255,0,0))
+			drawPointsTable(points, points.color) -- need a new way to show that this one is active, maybe a border? is that even trivial?
 			removePoint()
-
-			surface.SetDrawColor(0,0,0) -- can't forget to switch back to black
 		else
-			drawPointsTable(points)
+			drawPointsTable(points, points.color)
 		end
 	end
 end
 
+local function openColorPicker(index) -- opens a color picker for the specified point table
+	local points = point_tables[index]
+	assert(points, "Attempting to open color picker for non-existent point table")
+
+	-- make another frame
+	local frame = vgui.Create("DFrame")
+	frame:SetSize(200,200)
+	frame:Center()
+	frame:MakePopup()
+
+	-- I love the color mixer
+	local mixer = vgui.Create("DColorMixer",frame)
+	mixer:Dock(FILL)
+	mixer:SetPalette(false)
+	mixer:SetAlphaBar(false)
+	mixer:SetWangs(false)
+	mixer:SetColor(Color(255,0,0)) -- default to red, it pops enough to be noticeable
+
+	-- seriously, it's so good
+	local button = vgui.Create("DButton",frame)
+	button:Dock(BOTTOM)
+	button:SetText("Set Color")
+
+	function button:DoClick()
+		local color = mixer:GetColor()
+		points.color = color
+		frame:Remove()
+	end
+end
+
 function canvas:OnMousePressed(key)
-	print(key)
 	if key == MOUSE_LEFT then -- left click = add a point
 		local x,y = self:CursorPos()
 		addPoint(x,y)
@@ -79,5 +112,7 @@ function canvas:OnMousePressed(key)
 		switchPointTable(active_point_table + 1)
 	elseif key == MOUSE_4 then -- and this is the back side-button, they move the "table pointer" forward and backward
 		switchPointTable(active_point_table - 1)
+	elseif key == MOUSE_MIDDLE then -- middle click = open the color picker
+		openColorPicker(active_point_table)
 	end
 end
