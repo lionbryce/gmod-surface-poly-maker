@@ -1,8 +1,13 @@
 -- make the frame
 local frame = vgui.Create("DFrame")
-frame:SetSize(ScrW()/2,ScrH()/2)
+frame:SetSize(ScrW()/2,ScrH()/2 + 50)
 frame:Center()
 frame:MakePopup()
+
+local bottom_buttons = vgui.Create("Panel",frame) -- a panel to hold the buttons at the bottom
+bottom_buttons:Dock(BOTTOM)
+bottom_buttons:SetTall(50)
+
 -- happy canvas area to hold our drawing
 local canvas = vgui.Create("DPanel",frame)
 canvas:Dock(FILL)
@@ -114,5 +119,42 @@ function canvas:OnMousePressed(key)
 		switchPointTable(active_point_table - 1)
 	elseif key == MOUSE_MIDDLE then -- middle click = open the color picker
 		openColorPicker(active_point_table)
+	end
+end
+
+local function getPointsTableAsString() -- returns the current points table as a nice string
+	local output = {"point_tables = {"}
+	for k,points in ipairs(point_tables) do
+		if #points == 0 then continue end -- don't bother with empty tables
+		output[#output+1] = "\t{"
+		for _,v in ipairs(points) do
+			output[#output+1] = ("\t\t{x = %s, y = %s},"):format(v.x,v.y)
+		end
+		local c = points.color
+		output[#output+1] = ("\t\tcolor=Color(%s,%s,%s)\n\t},"):format(c.r,c.g,c.b)
+	end
+	output[#output+1] = "}"
+	return table.concat(output,"\n")
+end
+
+do -- print to console button
+	local button = vgui.Create("DButton",bottom_buttons)
+	button:Dock(LEFT)
+	button:SetText("Print to Console")
+	button:SetWide(150)
+
+	function button:DoClick()
+		print(getPointsTableAsString())
+	end
+end
+
+do -- save to clipboard botton
+	local button = vgui.Create("DButton",bottom_buttons)
+	button:Dock(LEFT)
+	button:SetText("Save to Clipboard")
+	button:SetWide(150)
+
+	function button:DoClick()
+		SetClipboardText(getPointsTableAsString())
 	end
 end
