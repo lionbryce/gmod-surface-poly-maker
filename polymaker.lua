@@ -137,24 +137,29 @@ local function getPointsTableAsString() -- returns the current points table as a
 	return table.concat(output,"\n")
 end
 
-do -- print to console button
+-- Using a table improves readability, and if needed expandability
+local buttonConfig = {
+	{ -- Print to console button
+		txt = "Print to Console",
+		onClick = function()
+			print(getPointsTableAsString())
+		end
+	},
+	{ -- Save to clipboard button
+		txt = "Save to Clipboard",
+		onClick = function()
+			SetClipboardText(getPointsTableAsString())
+		end
+	}
+}
+
+for _, config in ipairs(buttonConfig) do
 	local button = vgui.Create("DButton",bottom_buttons)
 	button:Dock(LEFT)
-	button:SetText("Print to Console")
 	button:SetWide(150)
-
+	button:SetText(config.txt)
+	
 	function button:DoClick()
-		print(getPointsTableAsString())
-	end
-end
-
-do -- save to clipboard botton
-	local button = vgui.Create("DButton",bottom_buttons)
-	button:Dock(LEFT)
-	button:SetText("Save to Clipboard")
-	button:SetWide(150)
-
-	function button:DoClick()
-		SetClipboardText(getPointsTableAsString())
+		config.onClick()
 	end
 end
